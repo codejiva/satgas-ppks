@@ -1,3 +1,4 @@
+// app/screens/ProfileScreen.tsx
 import React from 'react';
 import { View, Text } from 'react-native';
 

@@ -1,3 +1,4 @@
+// app/screens/HomeScreen.tsx
 import React from 'react';
 import { View, Text } from 'react-native';
 
