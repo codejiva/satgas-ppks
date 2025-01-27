@@ -5,6 +5,7 @@ const jwt = require('jsonwebtoken');
 const authRoutes = require('./routes/authRoutes');
 const reportRoutes = require('./routes/reportRoutes');
 const appointmentRoutes = require('./routes/appointmentRoutes');
+const userRoutes = require('./routes/userRoutes');
 const db = require('./db');
 const app = express();
 const port = 5000;
@@ -12,6 +13,7 @@ const port = 5000;
 // Middleware
 app.use(cors());
 app.use(bodyParser.json());
+app.use('/api', userRoutes);
 
 // Middleware untuk autentikasi token
 function authenticateToken(req, res, next) {
