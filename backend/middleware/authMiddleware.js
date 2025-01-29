@@ -1,47 +1,30 @@
 const jwt = require('jsonwebtoken');
 
-// Middleware Admin
+// Middleware untuk verifikasi token JWT
+const verifyToken = (req, res, next) => {
+    const authHeader = req.headers.authorization;
+    if (!authHeader) {
+        return res.status(403).json({ message: 'No token provided' });
+    }
+
+    const token = authHeader.split(' ')[1];
+    jwt.verify(token, 'secretkey', (err, decoded) => {
+        if (err) {
+            return res.status(401).json({ message: 'Unauthorized' });
+        }
+        req.user = decoded;
+        next();
+    });
+};
+
+// Middleware untuk admin
 const authorizeAdmin = (req, res, next) => {
-  const token = req.headers['authorization'];
-
-  if (!token) {
-    return res.status(403).send('No token provided');
-  }
-
-  jwt.verify(token, 'secretkey', (err, decoded) => {
-    if (err) {
-      return res.status(500).send('Failed to authenticate token');
-    }
-
-    if (decoded.role !== 'admin') {
-      return res.status(403).send('Access forbidden: Admins only');
-    }
-
-    req.user = decoded;
-    next();
-  });
+    verifyToken(req, res, () => {
+        if (req.user.role !== 'admin') {
+            return res.status(403).json({ message: 'Access forbidden: Admins only' });
+        }
+        next();
+    });
 };
 
-// Middleware Satgas
-const authorizeSatgas = (req, res, next) => {
-  const token = req.headers['authorization'];
-
-  if (!token) {
-    return res.status(403).send('No token provided');
-  }
-
-  jwt.verify(token, 'secretkey', (err, decoded) => {
-    if (err) {
-      return res.status(500).send('Failed to authenticate token');
-    }
-
-    if (decoded.role !== 'satgas') {
-      return res.status(403).send('Access forbidden: Satgas only');
-    }
-
-    req.user = decoded;
-    next();
-  });
-};
-
-module.exports = { authorizeAdmin, authorizeSatgas };
+module.exports = { verifyToken, authorizeAdmin };

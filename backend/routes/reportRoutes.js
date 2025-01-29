@@ -1,17 +1,12 @@
 const express = require('express');
 const router = express.Router();
-const { createReport, getReports, updateReportStatus } = require('../controllers/reportController');
-const { authorizeSatgas } = require('../middleware/authMiddleware');
+const { verifyToken } = require('../middleware/authMiddleware');
+const { createReport, getReports, updateReport, deleteReport } = require('../controllers/reportController');
 
-// Menambahkan laporan (semua user bisa)
-router.post('/', createReport);
-
-// Mendapatkan semua laporan (semua user bisa)
-router.get('/', getReports);
-
-// Update status laporan, hanya Satgas yang bisa
-router.put('/:id', authorizeSatgas, updateReportStatus);
-
-// 
+// Routes
+router.post('/', verifyToken, createReport);
+router.get('/', verifyToken, getReports);
+router.put('/:id', verifyToken, updateReport);
+router.delete('/:id', verifyToken, deleteReport);
 
 module.exports = router;
