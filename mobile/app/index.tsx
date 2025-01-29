@@ -1,22 +1,24 @@
-import React from 'react';
-import { NavigationContainer } from '@react-navigation/native';
-import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
-import HomeScreen from './screens/HomeScreen';
-import ReportScreen from './screens/ReportScreen';
-import ProfileScreen from './screens/ProfileScreen';
-import LoginScreen from './screens/auth/LoginScreen';
+import { useEffect, useState } from 'react';
+import { useRouter } from 'expo-router';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import axios from 'axios';
 
-const Tab = createBottomTabNavigator();
+export default function IndexScreen() {
+  const router = useRouter();
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
 
-const App = () => {
-  return (
-      <Tab.Navigator>
-        <Tab.Screen name="Home" component={HomeScreen} />
-        <Tab.Screen name="Reports" component={ReportScreen} />
-        <Tab.Screen name="Profile" component={ProfileScreen} />
-        <Tab.Screen name="Login" component={LoginScreen} />
-      </Tab.Navigator>
-  );
-};
+  useEffect(() => {
+    const checkAuth = async () => {
+      const token = await AsyncStorage.getItem('userToken');
+      if (token) {
+        setIsLoggedIn(true);
+        router.replace('/screens/home');  // Langsung ke Home kalau sudah login
+      } else {
+        router.replace('/screens/auth/login');  // Redirect ke login kalau belum login
+      }
+    };
+    checkAuth();
+  }, []);
 
-export default App;
+  return null; // Tidak perlu render apa pun, hanya untuk redirect
+}
