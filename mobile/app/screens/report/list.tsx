@@ -52,7 +52,7 @@ export default function ListReportScreen() {
           </View>
         )}
       />
-      <Button title="Buat Laporan Baru" onPress={() => router.push('/screens/report/CreateReportScreen')} />
+      <Button title="Buat Laporan Baru" onPress={() => router.push('/screens/report/create')} />
     </View>
   );
 }

@@ -11,19 +11,30 @@ export default function LoginScreen() {
 
   const handleLogin = async () => {
     try {
-      const response = await axios.post('http://10.0.2.2:5000/api/auth/login', {
-        username,
-        password,
-      });
+        const response = await axios.post('http://10.0.2.2:5000/api/auth/login', {
+            username,
+            password,
+        });
 
-      const { token } = response.data;
-      await AsyncStorage.setItem('userToken', token);
+        if (!response.data.token) {
+            throw new Error('Token tidak ditemukan, periksa kembali kredensial Anda.');
+        }
 
-      router.replace('/screens/home'); // Redirect ke home setelah login
-    } catch (error: any) { // Fix error 'error' is of type 'unknown'
-      Alert.alert('Login Gagal', error.response?.data?.message || 'Terjadi kesalahan');
+        await AsyncStorage.setItem('userToken', response.data.token);
+        router.replace('/screens/home'); 
+    } catch (error: unknown) {
+        console.error('Login Error:', error);
+
+        if (axios.isAxiosError(error)) {
+            Alert.alert('Login Gagal', error.response?.data?.message || 'Terjadi kesalahan.');
+        } else if (error instanceof Error) {
+            Alert.alert('Login Gagal', error.message);
+        } else {
+            Alert.alert('Login Gagal', 'Terjadi kesalahan yang tidak diketahui.');
+        }
     }
-  };
+};
+
 
   return (
     <View style={styles.container}>

@@ -1,12 +1,17 @@
 const express = require('express');
 const router = express.Router();
-const { verifyToken } = require('../middleware/authMiddleware');
-const { createReport, getUserReports, updateReport, deleteReport } = require('../controllers/reportController');
+const { verifyToken, authorizeSatgas } = require('../middleware/authMiddleware');
+const reportController = require('../controllers/reportController'); // Pastikan import ini benar
 
 // Routes untuk pelapor
-router.post('/', verifyToken, createReport); // Buat laporan baru
-router.get('/', verifyToken, getUserReports); // Ambil laporan milik user saat ini
-router.put('/:id', verifyToken, updateReport); // Update laporan tertentu
-router.delete('/:id', verifyToken, deleteReport); // Hapus laporan tertentu
+router.post('/', verifyToken, reportController.createReport);
+router.get('/', verifyToken, reportController.getUserReports);
+router.put('/:id', verifyToken, reportController.updateReport);
+router.delete('/:id', verifyToken, reportController.deleteReport);
+
+// Routes untuk Satgas
+router.get('/all', authorizeSatgas, reportController.getAllReports);
+router.get('/:id', authorizeSatgas, reportController.getReportById);
+router.put('/:id/process', authorizeSatgas, reportController.processReport);
 
 module.exports = router;

@@ -27,4 +27,14 @@ const authorizeAdmin = (req, res, next) => {
     });
 };
 
-module.exports = { verifyToken, authorizeAdmin };
+// Middleware untuk Satgas
+const authorizeSatgas = (req, res, next) => {
+    verifyToken(req, res, () => {
+        if (req.user.role !== 'satgas') {
+            return res.status(403).json({ message: 'Access forbidden: Satgas only' });
+        }
+        next();
+    });
+};
+
+module.exports = { verifyToken, authorizeAdmin, authorizeSatgas };

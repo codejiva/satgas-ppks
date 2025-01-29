@@ -5,7 +5,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import axios from 'axios';
 
 export default function HomeScreen() {
-  const [username, setUsername] = useState('');
+  const [user, setUser] = useState<{ username: string; role: string } | null>(null);
   const router = useRouter();
 
   useEffect(() => {
@@ -13,18 +13,18 @@ export default function HomeScreen() {
       try {
         const token = await AsyncStorage.getItem('userToken');
         if (!token) {
-          router.replace('/screens/auth/login'); // Redirect kalau belum login
+          router.replace('/screens/auth/login'); // Perbaikan path untuk login
           return;
         }
 
         const response = await axios.get('http://10.0.2.2:5000/api/auth/me', {
-          headers: { Authorization: `Bearer ${token}` }
+          headers: { Authorization: `Bearer ${token}` },
         });
 
-        setUsername(response.data.username);
+        setUser(response.data);
       } catch (error) {
         console.log('Error fetching user data:', error);
-        Alert.alert('Error', 'Gagal mendapatkan data user');
+        Alert.alert('Error', 'Gagal mendapatkan data pengguna');
       }
     };
 
@@ -38,7 +38,13 @@ export default function HomeScreen() {
 
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>Selamat Datang, {username}!</Text>
+      <Text style={styles.title}>Selamat Datang, {user?.username}!</Text>
+
+      {/* Jika pengguna adalah pelapor, tampilkan tombol buat laporan */}
+      {user?.role === 'pelapor' && (
+        <Button title="Buat Laporan" onPress={() => router.push('/screens/report/create')} />
+      )}
+
       <Button title="Logout" onPress={handleLogout} />
     </View>
   );
