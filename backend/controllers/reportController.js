@@ -23,15 +23,117 @@ const createReport = (req, res) => {
     });
 };
 
-// 📄 Ambil semua laporan milik user yang login
+
+// 🔍 Ambil semua laporan (Admin & Satgas bisa melihat semua laporan)
+const getAllReports = (req, res) => {
+    if (!req.user || !req.user.id || !req.user.role) {
+        return res.status(401).json({ message: 'Unauthorized' });
+    }
+
+    let query;
+    let params = [];
+
+    // 🔥 Admin & Satgas HARUS bisa melihat semua laporan
+    if (req.user.role === 'admin' || req.user.role === 'satgas') {
+        query = 'SELECT * FROM reports ORDER BY created_at DESC';
+    } 
+    // 🔥 Pelapor hanya bisa melihat laporan miliknya sendiri
+    else if (req.user.role === 'pelapor') {
+        query = 'SELECT * FROM reports WHERE id_pelapor = ? ORDER BY created_at DESC';
+        params.push(req.user.id);
+    } 
+    // 🔥 Role tidak valid
+    else {
+        return res.status(403).json({ message: 'Akses ditolak. Role tidak valid.' });
+    }
+
+    db.query(query, params, (err, results) => {
+        if (err) {
+            console.error('⚠️ Terjadi kesalahan saat mengambil laporan:', err);
+            return res.status(500).json({ message: 'Gagal mengambil laporan. Mohon coba lagi nanti 🙏' });
+        }
+        console.log(`✅ Laporan berhasil diambil oleh ${req.user.role}`);
+        res.json(results);
+    });
+};
+
+// 📄 Pelapor hanya bisa melihat laporan miliknya sendiri
 const getUserReports = (req, res) => {
+    if (!req.user || req.user.role !== 'pelapor') {
+        return res.status(403).json({ message: 'Akses ditolak. Hanya pelapor yang bisa melihat laporan ini.' });
+    }
+
     const query = 'SELECT * FROM reports WHERE id_pelapor = ? ORDER BY created_at DESC';
     db.query(query, [req.user.id], (err, results) => {
         if (err) {
             console.error('⚠️ Terjadi kesalahan saat mengambil laporan:', err);
-            return res.status(500).json({ message: 'Gagal mengambil data laporan Anda. Mohon coba lagi nanti 🙏' });
+            return res.status(500).json({ message: 'Gagal mengambil laporan Anda. Mohon coba lagi nanti 🙏' });
         }
+        console.log(`✅ Laporan pelapor ID ${req.user.id} berhasil diambil`);
         res.json(results);
+    });
+};
+
+// 🔍 Ambil detail laporan berdasarkan ID (hanya untuk Admin & Satgas)
+const getReportById = (req, res) => {
+    const { id } = req.params;
+
+    // Memeriksa apakah user yang login adalah admin, satgas, atau pelapor
+    if (!req.user || (req.user.role !== 'admin' && req.user.role !== 'satgas' && req.user.role !== 'pelapor')) {
+        return res.status(403).json({ message: 'Akses ditolak. Hanya admin, satgas, atau pelapor yang dapat melihat detail laporan.' });
+    }
+
+    // Jika pelapor yang mengakses, pastikan laporan yang diminta adalah miliknya
+    if (req.user.role === 'pelapor') {
+        const query = 'SELECT * FROM reports WHERE id = ? AND id_pelapor = ?';
+        db.query(query, [id, req.user.id], (err, results) => {
+            if (err) {
+                console.error('⚠️ Terjadi kesalahan saat mengambil laporan:', err);
+                return res.status(500).json({ message: 'Gagal mengambil laporan.' });
+            }
+            if (results.length === 0) {
+                return res.status(404).json({ message: 'Laporan tidak ditemukan atau Anda tidak memiliki akses ke laporan ini.' });
+            }
+            res.json(results[0]);
+        });
+    } else {
+        // Admin & Satgas dapat melihat semua laporan berdasarkan ID
+        const query = 'SELECT * FROM reports WHERE id = ?';
+        db.query(query, [id], (err, results) => {
+            if (err) {
+                console.error('⚠️ Terjadi kesalahan saat mengambil laporan:', err);
+                return res.status(500).json({ message: 'Gagal mengambil laporan.' });
+            }
+            if (results.length === 0) {
+                return res.status(404).json({ message: 'Laporan tidak ditemukan' });
+            }
+            res.json(results[0]);
+        });
+    }
+};
+
+
+// ✅ Satgas memproses laporan (Menerima / Menolak)
+const processReport = (req, res) => {
+    if (!req.user || req.user.role !== 'satgas') {
+        return res.status(403).json({ message: 'Akses ditolak. Hanya satgas yang dapat memproses laporan.' });
+    }
+
+    const { id } = req.params;
+    const { status } = req.body;
+
+    if (!['diterima', 'ditolak'].includes(status)) {
+        return res.status(400).json({ message: 'Status tidak valid. Gunakan "diterima" atau "ditolak".' });
+    }
+
+    const updateQuery = 'UPDATE reports SET status = ?, processed_by = ? WHERE id = ?';
+    db.query(updateQuery, [status, req.user.id, id], (err, results) => {
+        if (err) {
+            console.error('⚠️ Terjadi kesalahan saat memperbarui status laporan:', err);
+            return res.status(500).json({ message: 'Gagal memperbarui status laporan.' });
+        }
+        console.log(`✅ Laporan ID ${id} telah ${status} oleh Satgas ID: ${req.user.id}`);
+        res.json({ message: `Laporan telah ${status} oleh Satgas. Terima kasih! ✅` });
     });
 };
 
@@ -82,55 +184,6 @@ const deleteReport = (req, res) => {
     });
 };
 
-// 🔍 Ambil semua laporan (hanya untuk Satgas)
-const getAllReports = (req, res) => {
-    const query = 'SELECT * FROM reports ORDER BY created_at DESC';
-    db.query(query, (err, results) => {
-        if (err) {
-            console.error('⚠️ Terjadi kesalahan saat mengambil laporan:', err);
-            return res.status(500).json({ message: 'Gagal mengambil laporan. Mohon coba lagi nanti 🙏' });
-        }
-        res.json(results);
-    });
-};
-
-// 🔍 Ambil detail laporan berdasarkan ID (hanya untuk Satgas)
-const getReportById = (req, res) => {
-    const { id } = req.params;
-
-    const query = 'SELECT * FROM reports WHERE id = ?';
-    db.query(query, [id], (err, results) => {
-        if (err) {
-            console.error('⚠️ Terjadi kesalahan saat mengambil laporan:', err);
-            return res.status(500).json({ message: 'Gagal mengambil laporan.' });
-        }
-        if (results.length === 0) {
-            return res.status(404).json({ message: 'Laporan tidak ditemukan' });
-        }
-        res.json(results[0]);
-    });
-};
-
-// ✅ Satgas memproses laporan (Menerima / Menolak)
-const processReport = (req, res) => {
-    const { id } = req.params;
-    const { status } = req.body;
-
-    if (!['diterima', 'ditolak'].includes(status)) {
-        return res.status(400).json({ message: 'Status tidak valid. Gunakan "diterima" atau "ditolak".' });
-    }
-
-    const updateQuery = 'UPDATE reports SET status = ?, processed_by = ? WHERE id = ?';
-    db.query(updateQuery, [status, req.user.id, id], (err, results) => {
-        if (err) {
-            console.error('⚠️ Terjadi kesalahan saat memperbarui status laporan:', err);
-            return res.status(500).json({ message: 'Gagal memperbarui status laporan.' });
-        }
-        console.log(`✅ Laporan ID ${id} telah ${status} oleh Satgas ID: ${req.user.id}`);
-        res.json({ message: `Laporan telah ${status} oleh Satgas. Terima kasih! ✅` });
-    });
-};
-
 module.exports = {
     createReport,
     getUserReports,
@@ -140,4 +193,3 @@ module.exports = {
     updateReport,
     deleteReport
 };
-
