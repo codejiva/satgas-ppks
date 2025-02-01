@@ -1,45 +1,76 @@
-import React, { useState } from 'react';
-import { View, Text, TextInput, StyleSheet, Button, ScrollView, Image } from 'react-native';
-import * as ImagePicker from 'expo-image-picker'; // Untuk pick image dari gallery
+import React, { useState, useEffect } from 'react';
+import { View, Text, TextInput, StyleSheet, Button, ScrollView } from 'react-native';
+import axios from 'axios'; // Untuk memanggil API
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 export default function CreateReport() {
   const [formData, setFormData] = useState({
     title: '',
     name: '',
-    phone: '',
+    email: '', // Email diambil dari user yang login
     location: '',
     description: '',
-    evidence: '', // Path file bukti
   });
 
-  const handleChange = (field: string, value: string | boolean) => {
+  useEffect(() => {
+    const fetchUserData = async () => {
+      try {
+        // Ambil data pengguna yang sudah login (dari token yang ada)
+        const token = await AsyncStorage.getItem('userToken');
+        const response = await axios.get('http://10.0.2.2:5000/api/auth/me', {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
+
+        setFormData((prevData) => ({
+          ...prevData,
+          email: response.data.email, // Ambil email dari response dan set
+        }));
+      } catch (error) {
+        console.error('Failed to fetch user data:', error);
+      }
+    };
+
+    fetchUserData();
+  }, []);
+
+  const handleChange = (field: string, value: string) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
   };
 
-  const handleFileUpload = async () => {
-    const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.All,
-      allowsEditing: true,
-      aspect: [4, 3],
-      quality: 1,
-    });
+const handleSubmit = async () => {
+  // Pastikan semua data wajib diisi
+  if (!formData.title || !formData.name || !formData.location || !formData.description || !formData.email) {
+    alert('Pastikan semua data yang wajib diisi sudah lengkap');
+    return;
+  }
 
-    if (!result.canceled) {
-      setFormData((prev) => ({ ...prev, evidence: result.uri }));
-    }
-  };
-
-  const handleSubmit = () => {
-    // Validasi form, pastikan field yang wajib terisi
-    if (!formData.title || !formData.name || !formData.description) {
-      alert('Pastikan semua data yang wajib diisi sudah lengkap');
+  try {
+    const token = await AsyncStorage.getItem('userToken');
+    if (!token) {
+      alert('Token tidak ditemukan, pastikan Anda sudah login');
       return;
     }
 
-    // Kirim form (contoh log ke console)
-    console.log(formData);
+    const response = await axios.post(
+      'http://10.0.2.2:5000/api/reports',
+      formData,
+      {
+        headers: {
+          Authorization: `Bearer ${token}`, // Kirimkan token dalam header
+        },
+      }
+    );
+    console.log('Laporan berhasil dikirim', response.data);
     alert('Laporan berhasil dikirim');
-  };
+  } catch (error) {
+    console.error('Error mengirim laporan:', error);
+    alert('Terjadi kesalahan saat mengirim laporan.');
+  }
+};
+
+
 
   return (
     <ScrollView style={styles.container}>
@@ -63,10 +94,11 @@ export default function CreateReport() {
       />
       <TextInput
         style={styles.input}
-        placeholder="Nomor Telepon / Email"
-        value={formData.phone}
-        onChangeText={(text) => handleChange('phone', text)}
+        placeholder="Email"
+        value={formData.email}
+        onChangeText={(text) => handleChange('email', text)} // User bisa mengisi email mereka sendiri
       />
+
 
       <Text style={styles.subHeader}>Informasi Kejadian:</Text>
 
@@ -82,10 +114,6 @@ export default function CreateReport() {
         value={formData.description}
         onChangeText={(text) => handleChange('description', text)}
       />
-
-      {/* Bukti (file upload) */}
-      <Button title="Upload Bukti" onPress={handleFileUpload} />
-      {formData.evidence && <Image source={{ uri: formData.evidence }} style={{ width: 200, height: 200 }} />}
 
       {/* Submit Button */}
       <Button title="Kirim Laporan" onPress={handleSubmit} />

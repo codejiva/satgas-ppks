@@ -12,8 +12,8 @@ router.delete('/:id', verifyToken, reportController.deleteReport);
 // ✅ Pelapor hanya bisa melihat laporan yang dia buat sendiri
 router.get('/user/reports', [verifyToken, authorizePelapor], reportController.getUserReports); // Perbaiki dengan memanggil reportController.getUserReports
 
-// Routes untuk Satgas
-router.get('/all', authorizeSatgas, reportController.getAllReports);
+// Routes untuk Satgas & Admin
+router.get('/all', [verifyToken, authorizeSatgas], reportController.getAllReports);
 router.get('/:id', authorizeSatgas, reportController.getReportById);
 router.put('/:id/process', authorizeSatgas, reportController.processReport);
 

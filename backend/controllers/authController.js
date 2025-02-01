@@ -24,10 +24,12 @@ exports.register = (req, res) => {
 
 // Login User
 exports.login = (req, res) => {
-    const { username, password } = req.body;
-    const query = 'SELECT * FROM users WHERE username = ?';
-    
-    db.query(query, [username], (err, results) => {
+    const { usernameOrEmail, password } = req.body;
+
+    // Query untuk mencari user berdasarkan username atau email
+    const query = 'SELECT * FROM users WHERE username = ? OR email = ?';
+
+    db.query(query, [usernameOrEmail, usernameOrEmail], (err, results) => {
         if (err) return res.status(500).json({ message: 'Error fetching user' });
         if (results.length === 0) return res.status(404).json({ message: 'User not found' });
 
@@ -54,3 +56,47 @@ exports.getUserProfile = (req, res) => {
     }
     res.json({ username: req.user.username, role: req.user.role });
 };
+
+// Update user profile
+exports.updateProfile = async (req, res) => {
+    const { username, email, password } = req.body;
+    const userId = req.user.id; // Ambil ID user dari token
+
+    if (!email && !password) {
+        return res.status(400).json({ message: 'Email atau password harus diisi' });
+    }
+
+    try {
+        let query = 'UPDATE users SET ';
+        const params = [];
+
+        if (username) {
+            query += 'username = ?, ';
+            params.push(username);
+        }
+
+        if (email) {
+            query += 'email = ?, ';
+            params.push(email);
+        }
+
+        if (password) {
+            const hashedPassword = await bcrypt.hash(password, 10);
+            query += 'password = ?, ';
+            params.push(hashedPassword);
+        }
+
+        // Hapus koma terakhir dan tambahkan WHERE clause
+        query = query.slice(0, -2) + ' WHERE id = ?';
+        params.push(userId);
+
+        db.query(query, params, (err, results) => {
+            if (err) return res.status(500).json({ message: 'Error updating profile' });
+            res.json({ message: 'Profile updated successfully' });
+        });
+    } catch (error) {
+        console.error('Error updating profile:', error);
+        res.status(500).json({ message: 'Internal server error' });
+    }
+};
+
