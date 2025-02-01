@@ -1,111 +1,121 @@
 import React, { useState } from 'react';
-import { View, Text, TextInput, Button, StyleSheet, Alert } from 'react-native';
-import axios from 'axios';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import { View, Text, TextInput, StyleSheet, Button, ScrollView, Image } from 'react-native';
+import * as ImagePicker from 'expo-image-picker'; // Untuk pick image dari gallery
 
 export default function CreateReport() {
-  const [title, setTitle] = useState('');
-  const [description, setDescription] = useState('');
-  const [location, setLocation] = useState('');
-  const [jadwalPertemuan, setJadwalPertemuan] = useState('');
-  const [loading, setLoading] = useState(false);
+  const [formData, setFormData] = useState({
+    title: '',
+    name: '',
+    phone: '',
+    location: '',
+    description: '',
+    evidence: '', // Path file bukti
+  });
 
-  const handleSubmit = async () => {
-    if (!title || !description || !location || !jadwalPertemuan) {
-      Alert.alert('Form tidak lengkap', 'Harap lengkapi semua field');
-      return;
-    }
+  const handleChange = (field: string, value: string | boolean) => {
+    setFormData((prev) => ({ ...prev, [field]: value }));
+  };
 
-    try {
-      setLoading(true);
+  const handleFileUpload = async () => {
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.All,
+      allowsEditing: true,
+      aspect: [4, 3],
+      quality: 1,
+    });
 
-      const token = await AsyncStorage.getItem('userToken');
-      if (!token) {
-        Alert.alert('Token tidak ditemukan', 'Harap login terlebih dahulu');
-        return;
-      }
-
-      const response = await axios.post(
-        'http://10.0.2.2:5000/api/reports',
-        {
-          title,
-          description,
-          location,
-          jadwal_pertemuan: jadwalPertemuan,
-        },
-        {
-          headers: { Authorization: `Bearer ${token}` },
-        }
-      );
-
-      Alert.alert('Sukses', 'Laporan berhasil dibuat!');
-      // Reset form after submission
-      setTitle('');
-      setDescription('');
-      setLocation('');
-      setJadwalPertemuan('');
-    } catch (error) {
-      console.error('❌ Gagal mengirim laporan:', error);
-      Alert.alert('Gagal', 'Terjadi masalah saat mengirim laporan. Coba lagi nanti.');
-    } finally {
-      setLoading(false);
+    if (!result.canceled) {
+      setFormData((prev) => ({ ...prev, evidence: result.uri }));
     }
   };
 
-  return (
-    <View style={styles.container}>
-      <Text style={styles.header}>Buat Laporan</Text>
+  const handleSubmit = () => {
+    // Validasi form, pastikan field yang wajib terisi
+    if (!formData.title || !formData.name || !formData.description) {
+      alert('Pastikan semua data yang wajib diisi sudah lengkap');
+      return;
+    }
 
+    // Kirim form (contoh log ke console)
+    console.log(formData);
+    alert('Laporan berhasil dikirim');
+  };
+
+  return (
+    <ScrollView style={styles.container}>
+      <Text style={styles.header}>Formulir Laporan Kasus Pelecehan dan Kekerasan Seksual</Text>
+
+      {/* Judul Laporan */}
       <TextInput
         style={styles.input}
         placeholder="Judul Laporan"
-        value={title}
-        onChangeText={setTitle}
-      />
-      <TextInput
-        style={styles.input}
-        placeholder="Deskripsi Laporan"
-        value={description}
-        onChangeText={setDescription}
-        multiline
-      />
-      <TextInput
-        style={styles.input}
-        placeholder="Lokasi"
-        value={location}
-        onChangeText={setLocation}
-      />
-      <TextInput
-        style={styles.input}
-        placeholder="Jadwal Pertemuan"
-        value={jadwalPertemuan}
-        onChangeText={setJadwalPertemuan}
+        value={formData.title}
+        onChangeText={(text) => handleChange('title', text)}
       />
 
-      <Button title={loading ? 'Menyimpan...' : 'Buat Laporan'} onPress={handleSubmit} disabled={loading} />
+      <Text style={styles.subHeader}>Informasi Pelapor (Bersifat Rahasia):</Text>
 
-      {loading && <Text>Loading...</Text>}
-    </View>
+      <TextInput
+        style={styles.input}
+        placeholder="Nama Lengkap"
+        value={formData.name}
+        onChangeText={(text) => handleChange('name', text)}
+      />
+      <TextInput
+        style={styles.input}
+        placeholder="Nomor Telepon / Email"
+        value={formData.phone}
+        onChangeText={(text) => handleChange('phone', text)}
+      />
+
+      <Text style={styles.subHeader}>Informasi Kejadian:</Text>
+
+      <TextInput
+        style={styles.input}
+        placeholder="Lokasi Kejadian"
+        value={formData.location}
+        onChangeText={(text) => handleChange('location', text)}
+      />
+      <TextInput
+        style={styles.input}
+        placeholder="Deskripsi Kejadian"
+        value={formData.description}
+        onChangeText={(text) => handleChange('description', text)}
+      />
+
+      {/* Bukti (file upload) */}
+      <Button title="Upload Bukti" onPress={handleFileUpload} />
+      {formData.evidence && <Image source={{ uri: formData.evidence }} style={{ width: 200, height: 200 }} />}
+
+      {/* Submit Button */}
+      <Button title="Kirim Laporan" onPress={handleSubmit} />
+    </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    padding: 20,
+    padding: 16,
     backgroundColor: '#fff',
   },
   header: {
-    fontSize: 24,
+    fontSize: 22,
     fontWeight: 'bold',
-    marginBottom: 20,
+    marginBottom: 16,
     textAlign: 'center',
   },
+  subHeader: {
+    fontSize: 18,
+    fontWeight: '600',
+    marginVertical: 8,
+  },
   input: {
-    borderWidth: 1,
+    height: 40,
     borderColor: '#ccc',
-    padding: 10,
-    marginBottom: 10,
+    borderWidth: 1,
+    marginBottom: 12,
+    paddingLeft: 10,
     borderRadius: 5,
   },
 });

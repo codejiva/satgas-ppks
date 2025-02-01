@@ -4,15 +4,19 @@ const db = require('../db');
 const createReport = (req, res) => {
     const { title, description, location } = req.body;
 
+    // Validasi: Pastikan kolom yang wajib diisi tidak kosong
     if (!title || !description || !location) {
         return res.status(400).json({ message: 'Mohon lengkapi semua kolom laporan, termasuk judul, deskripsi, dan lokasi kejadian 🙏' });
     }
 
+    // Pastikan pengguna sudah login dan memiliki id
     if (!req.user || !req.user.id) {
         return res.status(401).json({ message: 'Anda belum terautentikasi. Silakan login terlebih dahulu untuk mengirim laporan ⚠️' });
     }
 
+    // Query untuk menyimpan laporan tanpa tanggal kejadian
     const query = 'INSERT INTO reports (id_pelapor, title, description, status, location) VALUES (?, ?, ?, ?, ?)';
+    
     db.query(query, [req.user.id, title, description, 'pending', location], (err, results) => {
         if (err) {
             console.error('⚠️ Terjadi kesalahan saat menyimpan laporan:', err);
@@ -22,7 +26,6 @@ const createReport = (req, res) => {
         res.status(201).json({ message: 'Terima kasih telah melaporkan kejadian ini. Laporan Anda akan segera kami proses! 🕵️‍♂️✨' });
     });
 };
-
 
 // 🔍 Ambil semua laporan (Admin & Satgas bisa melihat semua laporan)
 const getAllReports = (req, res) => {
